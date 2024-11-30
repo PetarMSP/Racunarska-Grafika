@@ -1,8 +1,7 @@
 DrawTransparent
 
 void DImage::DrawTransparent(CDC* pDC, CRect rcImg, CRect rcDC, COLORREF bgColor)
-{
-    // Kreiramo masku
+{   // Kreiramo masku
     CBitmap mask;
     mask.CreateBitmap(Width(), Height(), 1, 1, NULL);
 
