@@ -41,3 +41,50 @@ DrawTransparent
     srcDC.SelectObject(oldSrcBmp);
     maskDC.SelectObject(oldMaskBmp);
 }
+void DImage::DrawTransparent(CDC* pDC, DImage* pImage)
+{
+    int w = pImage->Width();
+    int h = pImage->Height();
+    CRect rect(0, 0, w, h);
+
+    CDC* srcDC = new CDC();
+    srcDC->CreateCompatibleDC(pDC);
+
+    CDC* dstDC = new CDC();
+    dstDC->CreateCompatibleDC(pDC);
+
+    CBitmap* src = new CBitmap();
+    src->CreateCompatibleBitmap(pDC, w, h);
+
+    CBitmap* dst = new CBitmap();
+    dst->CreateBitmap(w, h, 1, 1, nullptr);
+
+    CBitmap* srcOld = srcDC->SelectObject(src);
+    CBitmap* dstOld = dstDC->SelectObject(dst);
+
+    pImage->Draw(srcDC, rect, rect);
+
+    srcDC->SetBkColor(srcDC->GetPixel(0, 0));
+
+    dstDC->BitBlt(0, 0, w, h, srcDC, 0, 0, SRCCOPY);
+
+    srcDC->SetBkColor(RGB(0, 0, 0));
+    srcDC->SetTextColor(RGB(255, 255, 255));
+    srcDC->BitBlt(0, 0, w, h, dstDC, 0, 0, SRCAND);
+
+    pDC->BitBlt(0, 0, w, h, dstDC, 0, 0, SRCAND);
+    pDC->BitBlt(0, 0, w, h, srcDC, 0, 0, SRCPAINT);
+
+
+    dstDC->SelectObject(dstOld);
+    srcDC->SelectObject(srcOld);
+
+    dstDC->DeleteDC();
+    delete dstDC;
+
+    srcDC->DeleteDC();
+    delete srcDC;
+
+    delete src;
+    delete dst;
+}
