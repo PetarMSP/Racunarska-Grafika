@@ -1,3 +1,5 @@
+DrawTransparent
+
 void DImage::DrawTransparent(CDC* pDC, CRect rcImg, CRect rcDC, COLORREF bgColor)
 {
     // Kreiramo masku
