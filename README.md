@@ -1,90 +1,89 @@
 DrawTransparent
-  void DImage::DrawTransparent(CDC* pDC, CRect rcImg, CRect rcDC, COLORREF bgColor)
-{
-    // Kreiramo masku
+
+void DImage::DrawTransparent(CDC* pDC, CRect rcImg, CRect rcDC, COLORREF bgColor) {
     CBitmap mask;
-    mask.CreateBitmap(Width(), Height(), 1, 1, NULL);
+    mask.CreateBitmap(Width(), Height(), 1, 1, NULL);//monohorna maska crno-bela
 
-    // Kreiramo kompatibilne DC-ove
-    CDC srcDC, maskDC, memDC;
+    CDC srcDC, memDC, maskDC;
     srcDC.CreateCompatibleDC(pDC);
-    maskDC.CreateCompatibleDC(pDC);
     memDC.CreateCompatibleDC(pDC);
+    maskDC.CreateCompatibleDC(pDC);
 
-    // Selektujemo originalnu bitmapu i masku
-    CBitmap* oldSrcBmp = srcDC.SelectObject(m_pBmp); // Originalna slika
-    CBitmap* oldMaskBmp = maskDC.SelectObject(&mask); // Maska
+    CBitmap* oldSrcBmp = srcDC.SelectObject(m_pBmp);
+    CBitmap* oldMaskBmp = maskDC.SelectObject(&mask);
 
-    // Postavljamo boju pozadine (za transparentnost)
-    COLORREF oldBkColor = srcDC.SetBkColor(bgColor);
+    COLORREF oldBkcolor = srcDC.SetBkColor(bgColor);//treasparenta boja za bele piskele maske
 
-    // Kreiramo masku tako što kopiramo piksele pozadine
-    maskDC.BitBlt(0, 0, Width(), Height(), &srcDC, 0, 0, SRCCOPY);
+    maskDC.BitBlt(0, 0, Width(), Height(), &srcDC, 0, 0, SRCCOPY);//svi pikseli slike orginalne koji imaju bgcolor su beli u maski a ostali crni
 
-    // Vraćamo originalnu boju pozadine
-    srcDC.SetBkColor(oldBkColor);
-
-    // Primenjujemo masku: Transparentni deo (bela boja na maski)
+    srcDC.SetBkColor(oldBkcolor);//vrecamo prvobitnu strau u srcDC prozor
+    //primena maske na celom DC (pDC glavni)
     pDC->SetStretchBltMode(HALFTONE);
+    //ciljni pDC ima probusenu rupu u obliku slike jer AND uklanja tamo ge je belo na maski to jest pozadinu
+    pDC->StretchBlt(rcDC.left, rcDC.top, rcDC.Width(), rcDC.Height(), &maskDC, 
+          rcImg.left, rcImg.top,rcImg.Width(), rcImg.Height(), SRCAND);
 
-    // Korak 1: Primena maske sa SRCAND (uklanja transparentne delove)
-    pDC->StretchBlt(rcDC.left, rcDC.top, rcDC.Width(), rcDC.Height(),
-        &maskDC, rcImg.left, rcImg.top, rcImg.Width(), rcImg.Height(), SRCAND);
-
-    // Korak 2: Crtanje originalne slike sa SRCINVERT (preko transparentnih delova)
-    // Umesto SRCPAINT, koristimo SRCINVERT kako bi samo delovi slike koji nisu transparentni bili prikazani
     memDC.SelectObject(m_pBmp);
-    pDC->StretchBlt(rcDC.left, rcDC.top, rcDC.Width(), rcDC.Height(),
-        &memDC, rcImg.left, rcImg.top, rcImg.Width(), rcImg.Height(), SRCPAINT);
+    pDC->StretchBlt(rcDC.left, rcDC.top, rcDC.Width(), rcDC.Height(),&memDC, 
+          rcImg.left, rcImg.top, rcImg.Width(), rcImg.Height(), SRCPAINT);
 
-    // Vraćanje originalnih bitmapa
     srcDC.SelectObject(oldSrcBmp);
     maskDC.SelectObject(oldMaskBmp);
-}
-void DImage::DrawTransparent(CDC* pDC, DImage* pImage)
+}   
+// TODO: add draw code for native data here
+//Anti-Fliker (od ovog komentara do kod i od kraj koda do kraj flikera)
+CRect rect;
+GetClientRect(&rect);
+
+CDC* pMemDC = new CDC();
+pMemDC->CreateCompatibleDC(pDC);
+CBitmap bmp;
+bmp.CreateCompatibleBitmap(pDC, rect.Width(), rect.Height());
+pMemDC->SelectObject(&bmp);
+//Kod
+int pdcMode = pDC->SetGraphicsMode(GM_ADVANCED);
+XFORM transold;
+CRect rect;
+GetClientRect(&rect);
+pozadina->Draw(pDC, CRect(0, 0, pozadina->Width(), pozadina->Height()), CRect(0, 0 , rect.Width(), rect.Height()));
+pDC->GetWorldTransform(&transold);
+//neki..kod
+pDC->SetWorldTransform(&transold);
+pDC->SetGraphicsMode(pdcMode);
+
+CFont font;
+font.CreateFontW(72, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, L"Arial");
+CFont* oldFont = pDC->SelectObject(&font);
+COLORREF staraBoja = pDC->SetTextColor(RGB(255, 255, 255));
+pDC->TextOutW(rect.Width()/2, rect.Height()/2, L"The End");
+pDC->SelectObject(oldFont);
+pDC->SetTextColor(staraBoja);
+//kraj koda
+pDC->BitBlt(0, 0, rect.Width(), rect.Height(),pMemDC, 0, 0, SRCCOPY);
+pMemDC->DeleteDC();
+delete pMemDC;
+//kraj flikera
+void CpekmenView::Translate(CDC* pDC, float dX, float dY, float rightMultiply)
 {
-    int w = pImage->Width();
-    int h = pImage->Height();
-    CRect rect(0, 0, w, h);
+	XFORM trans = { 1,0,0,1,dX,dY };
+	pDC->ModifyWorldTransform(&trans, rightMultiply ? MWT_RIGHTMULTIPLY : MWT_LEFTMULTIPLY);
+}
 
-    CDC* srcDC = new CDC();
-    srcDC->CreateCompatibleDC(pDC);
+void CpekmenView::Rotate(CDC* pDC, float angle, float rightMultiply)
+{
+	XFORM trans = { cos(angle) , sin(angle) , -sin(angle) , cos(angle) ,  0,0 };
+	pDC->ModifyWorldTransform(&trans, rightMultiply ? MWT_RIGHTMULTIPLY : MWT_LEFTMULTIPLY);
+}
 
-    CDC* dstDC = new CDC();
-    dstDC->CreateCompatibleDC(pDC);
+void CpekmenView::Scale(CDC* pDC, float sX, float sY, float rightMultiply)
+{
+	XFORM trans = { sX ,0,0,sY, 0,0 };
+	pDC->ModifyWorldTransform(&trans, rightMultiply ? MWT_RIGHTMULTIPLY : MWT_LEFTMULTIPLY);
+}
 
-    CBitmap* src = new CBitmap();
-    src->CreateCompatibleBitmap(pDC, w, h);
-
-    CBitmap* dst = new CBitmap();
-    dst->CreateBitmap(w, h, 1, 1, nullptr);
-
-    CBitmap* srcOld = srcDC->SelectObject(src);
-    CBitmap* dstOld = dstDC->SelectObject(dst);
-
-    pImage->Draw(srcDC, rect, rect);
-
-    srcDC->SetBkColor(srcDC->GetPixel(0, 0));
-
-    dstDC->BitBlt(0, 0, w, h, srcDC, 0, 0, SRCCOPY);
-
-    srcDC->SetBkColor(RGB(0, 0, 0));
-    srcDC->SetTextColor(RGB(255, 255, 255));
-    srcDC->BitBlt(0, 0, w, h, dstDC, 0, 0, SRCAND);
-
-    pDC->BitBlt(0, 0, w, h, dstDC, 0, 0, SRCAND);
-    pDC->BitBlt(0, 0, w, h, srcDC, 0, 0, SRCPAINT);
-
-
-    dstDC->SelectObject(dstOld);
-    srcDC->SelectObject(srcOld);
-
-    dstDC->DeleteDC();
-    delete dstDC;
-
-    srcDC->DeleteDC();
-    delete srcDC;
-
-    delete src;
-    delete dst;
+void CpekmenView::Mirror(CDC* pDC, bool mX, bool mY, float rightMultiply)
+{
+	Scale(pDC, mX ? -1 : 1, mY ? -1 : 1, false);
+}
+}t;
 }
