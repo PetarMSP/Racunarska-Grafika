@@ -239,7 +239,53 @@ void CGLRenderer::DrawEnvCube(double a)
 
 	glDisable(GL_TEXTURE_2D);
 }
+void CGLRenderer::DrawSphere(double r, int nSeg, double texU, double texV, double texR)
+{
+	double stepAlpha = 3.1415 / nSeg;
+	double stepBeta = 2 * 3.1415 / nSeg;
 
+
+	double alpha, beta;
+
+	alpha = -3.1415 / 2;
+
+	for (int i = 0; i < nSeg; i++)
+	{
+		beta = 0.0;
+
+		glBegin(GL_QUAD_STRIP);
+	
+
+		for (int j = 0; j < nSeg + 1; j++)
+		{
+			double x1 = r * cos(alpha) * cos(beta);
+			double y1 = r * sin(alpha);
+			double z1 = r * cos(alpha) * sin(beta);
+
+			double tx1 = x1 / r * texR + texU;
+			double ty1 = z1 / r * texR + texV;
+
+			glTexCoord2d(tx1, ty1);
+			glVertex3d(x1, y1, z1);
+
+
+			double x2 = r * cos(alpha + stepAlpha) * cos(beta);
+			double y2 = r * sin(alpha + stepAlpha);
+			double z2 = r * cos(alpha + stepAlpha) * sin(beta);
+
+			double tx2 = x2 / r * texR + texU;
+			double ty2 = z2 / r * texR + texV;
+
+			glTexCoord2d(tx2, ty2);
+			glVertex3d(x2, y2, z2);
+
+			beta += stepBeta;
+		}
+		glEnd();
+
+		alpha += stepAlpha;
+	}
+}
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 DrawTransparent
