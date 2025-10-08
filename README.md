@@ -286,6 +286,258 @@ void CGLRenderer::DrawSphere(double r, int nSeg, double texU, double texV, doubl
 		alpha += stepAlpha;
 	}
 }
+void CGLRenderer::DrawCone(double r, double h, int nSeg, double texU, double texV, double texR)
+{
+	double stepAlpha = 2 * 3.1415 / nSeg;
+
+	glBegin(GL_TRIANGLE_FAN);
+
+	double alpha = 0.0;
+	glTexCoord2d(0.75, 0.75);
+	glVertex3d(0.0, h, 0.0);
+
+	for (int i = 0; i < nSeg + 1; i++)
+	{
+		double x1 = r * cos(alpha);
+		double z1 = r * sin(alpha);
+
+		double tx1 = x1 / r * texR + texU;
+		double ty1 = z1 / r * texR + texV;
+
+		glTexCoord2d(tx1, ty1);
+		glVertex3d(x1, 0.0, z1);
+
+		alpha += stepAlpha;
+	}
+
+	glEnd();
+}
+
+void CGLRenderer::DrawLegSegment(double r, double h, int nSeg)
+{
+	glPushMatrix();
+
+	DrawSphere(r, 2 * nSeg, 0.25, 0.25, 0.24);
+	DrawCone(r, h, nSeg, 0.75, 0.75, 0.25);
+
+	glPopMatrix();
+}
+
+void CGLRenderer::DrawLeg()
+{
+	glPushMatrix();
+
+	DrawLegSegment(1, 10, 5);
+	glTranslated(0.0, 10.0, 0.0);
+	glRotated(85.0, 1.0, 0.0, 0.0);
+	DrawLegSegment(1, 15, 5);
+
+	glPopMatrix();
+}
+
+void CGLRenderer::DrawSpiderBody()
+{
+
+	// grudni deo
+	glPushMatrix();
+
+	glScaled(1.0, 0.5, 1.0);
+	DrawSphere(3, 10, 0.25, 0.25, 0.24);
+
+	glPopMatrix();
+
+	// rep
+	glPushMatrix();
+
+	glTranslated(6.5, 0.0, 0.0);
+	glScaled(1.0, 0.8, 1.0);
+	DrawSphere(5, 10, 0.25, 0.25, 0.24);
+
+	glPopMatrix();
+
+	//glava
+	glPushMatrix();
+
+	glTranslated(-3.5, 0.0, 0.0);
+	glScaled(1.0, 0.5, 1.0);
+	DrawSphere(2, 10, 0.75, 0.25, 0.24);
+
+	glPopMatrix();
+}
+
+void CGLRenderer::DrawSpider()
+{
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, m_texSpider);
+	glColor3f(1.0, 1.0, 1.0);
+
+	glPushMatrix();
+	DrawSpiderBody();
+	glPopMatrix();
+
+	// pipci
+
+	glPushMatrix();
+
+	glRotated(75, 0.0, 1.0, 0.0);
+	
+	for (int i = 0; i < 4; i++)
+	{
+		glRotated(-30, 0.0, 1.0, 0.0);
+		glPushMatrix();
+		glRotatef(45, 1.0, 0.0, 0.0);
+		DrawLeg();
+		glPopMatrix();
+	}
+
+	glPopMatrix();
+
+	glPushMatrix();
+
+	glRotated(180, 0.0, 1.0, 0.0);
+
+	glRotated(75, 0.0, 1.0, 0.0);
+
+	for (int i = 0; i < 4; i++)
+	{
+		glRotated(-30, 0.0, 1.0, 0.0);
+		glPushMatrix();
+		glRotatef(45, 1.0, 0.0, 0.0);
+		DrawLeg();
+		glPopMatrix();
+	}
+
+	glPopMatrix();
+
+	glDisable(GL_TEXTURE_2D);
+}
+void GLRenderer::DrawCylinder(float r, float h, float nr, float nh, bool axes)
+{
+    float texStepY = 1.0 / nh;
+    float texStepX = 1.0 / nr;
+    float texY = 0;
+    float angStep = (2 * piconst) / nr; //za x i z(i nalazenje normala)
+   // float yStep = h / nh;
+    //float startY = (((int)nh % 2) == 0) ? (((int)nh / 2) * yStep) : (((int)nh / 2) + 0.5) * yStep;
+   // float currY = startY;
+    for (int i = 0; i < nh; i++)
+    {
+        float currAng = 0;
+        float texX = 0;
+        glBegin(GL_QUAD_STRIP);
+        {
+            for (int j = 0; j < nr + 1; j++)
+            {
+                float x = r * cos(currAng);
+                float z = -r * sin(currAng);
+                float nx = x / r;
+                float nz = z / r;
+                glNormal3f(nx, 0, nz);
+                glTexCoord2f(texX, texY);
+                glVertex3f(x, h/2, z);
+                glTexCoord2f(texX, texY + texStepY);
+                glVertex3f(x, -h/2, z);
+                texX += texStepX;
+                currAng += angStep;
+            }
+        }
+        glEnd();
+        texY += texStepY;
+       // currY -= yStep;
+    }
+
+    glBegin(GL_TRIANGLE_FAN);
+    {
+        glNormal3f(0.0, 1.0, 0.0);
+        glTexCoord2f(0.5, 0.5);
+        glVertex3f(0, h / 2, 0);
+        float currAng = 0;
+        for (int i = 0; i < nr + 1; i++)
+        {
+            float x = r * cos(currAng);
+            float z = -r * sin(currAng);
+            float texX = 0.5 + 0.5 * cos(currAng); //zasto ovo prvo 0.5 + za x i - za y?? i sto uopste koristimo 0.5???
+            texY = 0.5 - 0.5 * sin(currAng);
+            glTexCoord2f(texX, texY);
+            glVertex3f(x, h / 2, z);
+            currAng += angStep;
+        }
+    }
+    glEnd();
+
+    glBegin(GL_TRIANGLE_FAN);
+    {
+        glNormal3f(0.0, -1.0, 0.0);
+        glTexCoord2f(0.5, 0.5);
+        glVertex3f(0, -h / 2, 0);
+        float currAng = 0;
+        for (int i = 0; i < nr + 1; i++)
+        {
+            float x = r * cos(currAng);
+            float z = r * sin(currAng);
+            float texX = 0.5 + 0.5 * cos(currAng);
+            texY = 0.5 - 0.5 * sin(currAng);
+            glTexCoord2f(texX, texY);
+            glVertex3f(x, -h / 2, z);
+            currAng += angStep;
+        }
+    }
+    glEnd();
+
+    if(axes)
+    {
+        glDisable(GL_LIGHTING);
+        glBegin(GL_LINES);
+        {
+            glColor3f(1.0, 0.0, 0.0);
+            glVertex3f(0.0, 0.0, 0.0);
+            glVertex3f(r + 1, 0.0, 0.0);
+
+            glColor3f(0.0, 1.0, 0.0);
+            glVertex3f(0.0, 0.0, 0.0);
+            glVertex3f(0.0, h / 2 + 1, 0.0);
+
+            glColor3f(0.0, 0.0, 1.0);
+            glVertex3f(0.0, 0.0, 0.0);
+            glVertex3f(0.0, 0.0, r + 1);
+        }
+        glEnd();
+        glEnable(GL_LIGHTING);
+    }
+}
+
+void GLRenderer::DrawTelescope(float r, float h, float nr, float nh)
+{
+    for (int i = 0; i < 3; i++)
+    {
+        glPushMatrix();
+        glRotatef(i * 120, 0.0, 1.0, 0.0);
+        glRotatef(alpha, 1.0, 0.0, 0.0);
+        glTranslatef(0.0, -0.6 * h, 0.0);
+        DrawCylinder(0.1 * r, 1.2 * h, nr, nh, false);
+        glPopMatrix();
+    }
+
+    glPushMatrix();
+    glRotatef(-90, 0.0, 0.0, 1.0);
+    glRotatef(angleHor, 1.0, 0.0, 0.0);
+    glRotatef(angleVer, 0.0, 0.0, 1.0);
+    glTranslatef(0.0, (h / 2) - dHolder, 0.0);
+    DrawCylinder(r, h, nr, nh, true);
+    glPushMatrix();
+    glTranslatef(0.0, h / 2 + 0.4 * h - dHidden, 0.0);
+    DrawCylinder(0.8 * r, 0.8 * h, nr, nh, false);
+    glPopMatrix();
+    glTranslatef(0.0, -h / 2 + dVizor, 0.0);
+    glRotatef(90, 0.0, 0.0, 1.0);
+    glTranslatef(0.0, (0.2 / 2.0) * h, 0.0);
+    DrawCylinder(0.1 * r, 0.2 * h, nr, nh, false);
+    glTranslatef(0.0, (0.2 / 2.0) * h + (0.1 / 2.0) * r, 0.0);
+    glRotatef(-90, 0.0, 0.0, 1.0);
+    DrawCylinder(0.1 * r, 0.3 * h, nr, nh, false);
+    glPopMatrix();
+}
+
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 DrawTransparent
